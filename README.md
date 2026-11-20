@@ -48,4 +48,4 @@ AI Chat Session Link: https://claude.ai/code/cshk_015m9jBAhkVQ9Vm2p8n3ZZCGTmc9p5
 Membantu membuat rencana pengerjaan Tugas Individu 8 dan mengerjakan rencana tersebut.
 
 #### Perbaikan Manual
--
+Tidak ada
