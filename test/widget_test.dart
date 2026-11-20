@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:myportofolio_mobile/main.dart';
 import 'package:myportofolio_mobile/main.dart' as app;
+import 'package:myportofolio_mobile/validators.dart';
 
 void main() {
   testWidgets('Tambah Proyek opens the form, and Back returns to menu',
@@ -95,6 +96,18 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Add Project Form'), findsOneWidget);
 
+      // Drawer yang sama di tiap form membuka form lain.
+      for (final (option, title) in [
+        ('Add Experience', 'Add Experience Form'),
+        ('Add Achievement', 'Add Achievement Form'),
+      ]) {
+        await tester.tap(find.byIcon(Icons.menu));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(option));
+        await tester.pumpAndSettle();
+        expect(find.text(title), findsOneWidget);
+      }
+
       await tester.tap(find.byIcon(Icons.menu));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Home'));
@@ -105,5 +118,188 @@ void main() {
     expect(find.text('Selamat datang di MyPortfolio Mobile!'), findsOneWidget);
     // pushReplacement: form sudah diganti, bukan ditumpuk di bawah menu.
     expect(find.text('Add Project Form'), findsNothing);
+    expect(find.text('Add Achievement Form'), findsNothing);
   });
+
+  testWidgets('Experience and Achievement cards open forms, Back returns',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    for (final (card, title) in [
+      ('Tambah Pengalaman', 'Add Experience Form'),
+      ('Tambah Pencapaian', 'Add Achievement Form'),
+    ]) {
+      await openCard(tester, card);
+      expect(find.text(title), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Selamat datang di MyPortfolio Mobile!'), findsOneWidget);
+    }
+  });
+
+  testWidgets('Experience form validates fields and date order, then dialog',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+    await openCard(tester, 'Tambah Pengalaman');
+
+    final title = find.widgetWithText(TextFormField, 'Judul Pengalaman');
+    final organization = find.widgetWithText(TextFormField, 'Organisasi');
+    final description =
+        find.widgetWithText(TextFormField, 'Deskripsi Pengalaman');
+    final thumbnail = find.widgetWithText(TextFormField, 'Thumbnail');
+    final startedAt = find.widgetWithText(TextFormField, 'Tanggal Mulai');
+    final endedAt = find.widgetWithText(TextFormField, 'Tanggal Selesai');
+
+    await tapSave(tester);
+    expect(find.text('Judul pengalaman tidak boleh kosong!'), findsOneWidget);
+    expect(find.text('Deskripsi pengalaman tidak boleh kosong!'),
+        findsOneWidget);
+    expect(find.text('Tanggal mulai tidak boleh kosong!'), findsOneWidget);
+
+    // Isian yang hanya spasi tetap dianggap kosong.
+    await tester.enterText(title, '   ');
+    await tapSave(tester);
+    expect(find.text('Judul pengalaman tidak boleh kosong!'), findsOneWidget);
+
+    await tester.enterText(title, 'a' * 256);
+    await tester.enterText(organization, 'o' * 256);
+    await tapSave(tester);
+    expect(find.text('Judul pengalaman maksimal 255 karakter!'), findsOneWidget);
+    expect(find.text('Organisasi maksimal 255 karakter!'), findsOneWidget);
+
+    await tester.enterText(title, '  Teaching Assistant  ');
+    await tester.enterText(organization, 'Fasilkom UI');
+    await tester.enterText(description, 'Asdos PBP');
+    await tester.enterText(thumbnail, 'ftp://example.com/a.png');
+    await tapSave(tester);
+    expect(find.text('Tautan harus berupa URL yang valid!'), findsOneWidget);
+    await tester.enterText(thumbnail, 'https://example.com/a.png');
+
+    // Kategori dari dropdown (EXPERIENCE_CHOICES).
+    await tester.ensureVisible(find.text('Full-time'));
+    await tester.tap(find.text('Full-time'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Part-time').last);
+    await tester.pumpAndSettle();
+
+    // Tanggal selesai sebelum tanggal mulai ditolak.
+    await pickDay(tester, startedAt, 20);
+    await pickDay(tester, endedAt, 10);
+    await tapSave(tester);
+    expect(find.text('Tanggal selesai tidak boleh sebelum tanggal mulai!'),
+        findsOneWidget);
+
+    // Tombol hapus mengosongkan tanggal selesai: pengalaman masih berjalan.
+    await tester.tap(find.byTooltip('Hapus tanggal selesai'));
+    await tester.pumpAndSettle();
+    await tapSave(tester);
+    expect(find.text('Pengalaman berhasil ditambahkan!'), findsOneWidget);
+    expect(find.text('Selesai: Masih berjalan'), findsOneWidget);
+    // Tutup dialog lewat barrier agar isian tidak di-reset.
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pumpAndSettle();
+
+    await pickDay(tester, endedAt, 25);
+    await tapSave(tester);
+    expect(find.text('Judul: Teaching Assistant'), findsOneWidget);
+    expect(find.text('Kategori: Part-time'), findsOneWidget);
+    expect(find.text('Mulai: ${dayOfThisMonth(20)}'), findsOneWidget);
+    expect(find.text('Selesai: ${dayOfThisMonth(25)}'), findsOneWidget);
+
+    // OK mengosongkan form termasuk tanggal dan kategori.
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.text(dayOfThisMonth(20)), findsNothing);
+    expect(find.text('Full-time'), findsOneWidget);
+    await tapSave(tester);
+    expect(find.text('Pengalaman berhasil ditambahkan!'), findsNothing);
+    expect(find.text('Tanggal mulai tidak boleh kosong!'), findsOneWidget);
+  });
+
+  testWidgets('Achievement form validates fields, then shows dialog',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+    await openCard(tester, 'Tambah Pencapaian');
+
+    final title = find.widgetWithText(TextFormField, 'Judul Pencapaian');
+    final organizer = find.widgetWithText(TextFormField, 'Penyelenggara');
+    final certificate =
+        find.widgetWithText(TextFormField, 'Tautan Sertifikat');
+
+    await tester.enterText(title, '   ');
+    await tapSave(tester);
+    expect(find.text('Judul pencapaian tidak boleh kosong!'), findsOneWidget);
+    expect(find.text('Tanggal diraih tidak boleh kosong!'), findsOneWidget);
+
+    await tester.enterText(title, 'a' * 256);
+    await tester.enterText(organizer, 'o' * 256);
+    await tapSave(tester);
+    expect(find.text('Judul pencapaian maksimal 255 karakter!'), findsOneWidget);
+    expect(find.text('Penyelenggara maksimal 255 karakter!'), findsOneWidget);
+
+    await tester.enterText(title, ' Juara 1 CTF ');
+    await tester.enterText(organizer, 'CSUI');
+    await tester.enterText(certificate, 'not a url');
+    await pickDay(
+        tester, find.widgetWithText(TextFormField, 'Tanggal Diraih'), 15);
+    await tapSave(tester);
+    expect(find.text('Tautan harus berupa URL yang valid!'), findsOneWidget);
+
+    await tester.enterText(certificate, 'https://example.com/cert.pdf');
+    await tapSave(tester);
+    expect(find.text('Pencapaian berhasil ditambahkan!'), findsOneWidget);
+    expect(find.text('Judul: Juara 1 CTF'), findsOneWidget);
+    expect(find.text('Tanggal: ${dayOfThisMonth(15)}'), findsOneWidget);
+
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tapSave(tester);
+    expect(find.text('Pencapaian berhasil ditambahkan!'), findsNothing);
+    expect(find.text('Tanggal diraih tidak boleh kosong!'), findsOneWidget);
+  });
+
+  test('validateOptionalUrl accepts empty and valid http(s) URLs only', () {
+    for (final ok in [null, '', '  ', 'https://a.com', 'http://localhost:8000',
+        'http://[::1]/']) {
+      expect(validateOptionalUrl(ok), isNull, reason: ok);
+    }
+    for (final bad in ['a.com', 'ftp://a.com', 'http://a', 'https://']) {
+      expect(validateOptionalUrl(bad), isNotNull, reason: bad);
+    }
+  });
+}
+
+// Kartu bisa berada di bawah layar, jadi gulir dulu sebelum ditekan.
+Future<void> openCard(WidgetTester tester, String name) async {
+  await tester.ensureVisible(find.text(name));
+  await tester.tap(find.text(name));
+  await tester.pumpAndSettle();
+  // Timer SnackBar (4 detik) baru jalan setelah animasinya selesai; tunggu
+  // sampai hilang agar tidak menutupi tombol Save.
+  await tester.pump(const Duration(seconds: 5));
+  await tester.pumpAndSettle();
+  expect(find.byType(SnackBar), findsNothing);
+}
+
+Future<void> tapSave(WidgetTester tester) async {
+  await tester.ensureVisible(find.text('Save'));
+  await tester.tap(find.text('Save'));
+  await tester.pumpAndSettle();
+}
+
+// Date picker terbuka di bulan berjalan, jadi cukup pilih nomor hari.
+Future<void> pickDay(WidgetTester tester, Finder field, int day) async {
+  await tester.ensureVisible(field);
+  await tester.tap(field);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('$day'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('OK'));
+  await tester.pumpAndSettle();
+}
+
+String dayOfThisMonth(int day) {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, day).toIso8601String().substring(0, 10);
 }
