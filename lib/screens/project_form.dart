@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:myportofolio_mobile/validators.dart';
 import 'package:myportofolio_mobile/widgets/left_drawer.dart';
 
 class ProjectFormPage extends StatefulWidget {
@@ -132,22 +133,7 @@ class _ProjectFormPageState extends State<ProjectFormPage> {
                       _url = value!;
                     });
                   },
-                  validator: (String? value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return null;
-                    }
-                    // Mirip URLField Django: wajib http/https dan host berupa
-                    // domain bertitik, localhost, atau alamat IPv6.
-                    final uri = Uri.tryParse(value.trim());
-                    if (uri == null ||
-                        !(uri.isScheme('http') || uri.isScheme('https')) ||
-                        !(uri.host == 'localhost' ||
-                            uri.host.contains('.') ||
-                            uri.host.contains(':'))) {
-                      return "Tautan harus berupa URL yang valid!";
-                    }
-                    return null;
-                  },
+                  validator: validateOptionalUrl,
                 ),
               ),
 
