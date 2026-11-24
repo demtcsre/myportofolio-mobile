@@ -59,11 +59,7 @@ class _ExperienceFormPageState extends State<ExperienceFormPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Center(
-          child: Text(
-            'Add Experience Form',
-          ),
-        ),
+        title: const Center(child: Text('Add Experience Form')),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
       ),
@@ -165,10 +161,12 @@ class _ExperienceFormPageState extends State<ExperienceFormPage> {
                   ),
                   initialValue: _category,
                   items: _categories.entries
-                      .map((entry) => DropdownMenuItem(
-                            value: entry.key,
-                            child: Text(entry.value),
-                          ))
+                      .map(
+                        (entry) => DropdownMenuItem(
+                          value: entry.key,
+                          child: Text(entry.value),
+                        ),
+                      )
                       .toList(),
                   onChanged: (String? newValue) {
                     setState(() {
@@ -293,23 +291,22 @@ class _ExperienceFormPageState extends State<ExperienceFormPage> {
                           builder: (context) {
                             return AlertDialog(
                               title: const Text(
-                                  'Pengalaman berhasil ditambahkan!'),
+                                'Pengalaman berhasil ditambahkan!',
+                              ),
                               content: SingleChildScrollView(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     // trim() seperti CharField Django.
                                     Text('Judul: ${_title.trim()}'),
-                                    Text(
-                                        'Organisasi: ${_organization.trim()}'),
+                                    Text('Organisasi: ${_organization.trim()}'),
                                     Text('Deskripsi: ${_description.trim()}'),
-                                    Text(
-                                        'Kategori: ${_categories[_category]}'),
+                                    Text('Kategori: ${_categories[_category]}'),
                                     Text('Thumbnail: ${_thumbnail.trim()}'),
+                                    Text('Mulai: ${_formatDate(_startedAt!)}'),
                                     Text(
-                                        'Mulai: ${_formatDate(_startedAt!)}'),
-                                    Text(
-                                        'Selesai: ${_endedAt == null ? 'Masih berjalan' : _formatDate(_endedAt!)}'),
+                                      'Selesai: ${_endedAt == null ? 'Masih berjalan' : _formatDate(_endedAt!)}',
+                                    ),
                                   ],
                                 ),
                               ),

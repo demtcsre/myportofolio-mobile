@@ -51,3 +51,6 @@ app.*.map.json
 # Catatan agent lokal
 .claude/
 CLAUDE.md
+
+# Generated json_serializable files
+*.g.dart

@@ -1,14 +1,20 @@
+import 'dart:convert';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 import 'package:myportofolio_mobile/main.dart';
-import 'package:myportofolio_mobile/main.dart' as app;
+import 'package:myportofolio_mobile/models/project.dart';
+import 'package:myportofolio_mobile/services/api_client.dart';
 import 'package:myportofolio_mobile/validators.dart';
 
 void main() {
-  testWidgets('Tambah Proyek opens the form, and Back returns to menu',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Tambah Proyek opens the form, and Back returns to menu', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
 
     await tester.tap(find.text('Tambah Proyek'));
     await tester.pumpAndSettle();
@@ -20,9 +26,10 @@ void main() {
     expect(find.text('Selamat datang di MyPortfolio Mobile!'), findsOneWidget);
   });
 
-  testWidgets('Form validates required fields and URL, then shows dialog',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Form validates required fields and URL, then shows dialog', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
     await tester.tap(find.text('Tambah Proyek'));
     await tester.pumpAndSettle();
 
@@ -55,8 +62,11 @@ void main() {
     for (final bad in ['not a url', 'ftp://example.com', 'http://a']) {
       await tester.enterText(url, bad);
       await tapSave();
-      expect(find.text('Tautan harus berupa URL yang valid!'), findsOneWidget,
-          reason: bad);
+      expect(
+        find.text('Tautan harus berupa URL yang valid!'),
+        findsOneWidget,
+        reason: bad,
+      );
     }
 
     await tester.enterText(url, 'https://github.com/example');
@@ -72,8 +82,9 @@ void main() {
     expect(find.text('Nama proyek tidak boleh kosong!'), findsOneWidget);
   });
 
-  testWidgets('main() starts the app, drawer goes to form and back Home',
-      (WidgetTester tester) async {
+  testWidgets('Drawer goes to forms and back Home when logged in', (
+    WidgetTester tester,
+  ) async {
     // Font test membuat tiap huruf selebar ukuran font, teks DrawerHeader jadi
     // overflow padahal muat di perangkat asli. Abaikan hanya overflow dari
     // left_drawer.dart, overflow di tempat lain tetap membuat test gagal.
@@ -86,8 +97,7 @@ void main() {
     };
 
     try {
-      app.main();
-      await tester.pumpAndSettle();
+      await tester.pumpWidget(buildApp());
       expect(find.text('2506543640'), findsOneWidget);
 
       await tester.tap(find.byIcon(Icons.menu));
@@ -121,9 +131,10 @@ void main() {
     expect(find.text('Add Achievement Form'), findsNothing);
   });
 
-  testWidgets('Experience and Achievement cards open forms, Back returns',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Experience and Achievement cards open forms, Back returns', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
 
     for (final (card, title) in [
       ('Tambah Pengalaman', 'Add Experience Form'),
@@ -134,27 +145,35 @@ void main() {
 
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(find.text('Selamat datang di MyPortfolio Mobile!'), findsOneWidget);
+      expect(
+        find.text('Selamat datang di MyPortfolio Mobile!'),
+        findsOneWidget,
+      );
     }
   });
 
-  testWidgets('Experience form validates fields and date order, then dialog',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Experience form validates fields and date order, then dialog', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
     await openCard(tester, 'Tambah Pengalaman');
 
     final title = find.widgetWithText(TextFormField, 'Judul Pengalaman');
     final organization = find.widgetWithText(TextFormField, 'Organisasi');
-    final description =
-        find.widgetWithText(TextFormField, 'Deskripsi Pengalaman');
+    final description = find.widgetWithText(
+      TextFormField,
+      'Deskripsi Pengalaman',
+    );
     final thumbnail = find.widgetWithText(TextFormField, 'Thumbnail');
     final startedAt = find.widgetWithText(TextFormField, 'Tanggal Mulai');
     final endedAt = find.widgetWithText(TextFormField, 'Tanggal Selesai');
 
     await tapSave(tester);
     expect(find.text('Judul pengalaman tidak boleh kosong!'), findsOneWidget);
-    expect(find.text('Deskripsi pengalaman tidak boleh kosong!'),
-        findsOneWidget);
+    expect(
+      find.text('Deskripsi pengalaman tidak boleh kosong!'),
+      findsOneWidget,
+    );
     expect(find.text('Tanggal mulai tidak boleh kosong!'), findsOneWidget);
 
     // Isian yang hanya spasi tetap dianggap kosong.
@@ -165,7 +184,10 @@ void main() {
     await tester.enterText(title, 'a' * 256);
     await tester.enterText(organization, 'o' * 256);
     await tapSave(tester);
-    expect(find.text('Judul pengalaman maksimal 255 karakter!'), findsOneWidget);
+    expect(
+      find.text('Judul pengalaman maksimal 255 karakter!'),
+      findsOneWidget,
+    );
     expect(find.text('Organisasi maksimal 255 karakter!'), findsOneWidget);
 
     await tester.enterText(title, '  Teaching Assistant  ');
@@ -187,8 +209,10 @@ void main() {
     await pickDay(tester, startedAt, 20);
     await pickDay(tester, endedAt, 10);
     await tapSave(tester);
-    expect(find.text('Tanggal selesai tidak boleh sebelum tanggal mulai!'),
-        findsOneWidget);
+    expect(
+      find.text('Tanggal selesai tidak boleh sebelum tanggal mulai!'),
+      findsOneWidget,
+    );
 
     // Tombol hapus mengosongkan tanggal selesai: pengalaman masih berjalan.
     await tester.tap(find.byTooltip('Hapus tanggal selesai'));
@@ -217,15 +241,15 @@ void main() {
     expect(find.text('Tanggal mulai tidak boleh kosong!'), findsOneWidget);
   });
 
-  testWidgets('Achievement form validates fields, then shows dialog',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Achievement form validates fields, then shows dialog', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
     await openCard(tester, 'Tambah Pencapaian');
 
     final title = find.widgetWithText(TextFormField, 'Judul Pencapaian');
     final organizer = find.widgetWithText(TextFormField, 'Penyelenggara');
-    final certificate =
-        find.widgetWithText(TextFormField, 'Tautan Sertifikat');
+    final certificate = find.widgetWithText(TextFormField, 'Tautan Sertifikat');
 
     await tester.enterText(title, '   ');
     await tapSave(tester);
@@ -235,14 +259,20 @@ void main() {
     await tester.enterText(title, 'a' * 256);
     await tester.enterText(organizer, 'o' * 256);
     await tapSave(tester);
-    expect(find.text('Judul pencapaian maksimal 255 karakter!'), findsOneWidget);
+    expect(
+      find.text('Judul pencapaian maksimal 255 karakter!'),
+      findsOneWidget,
+    );
     expect(find.text('Penyelenggara maksimal 255 karakter!'), findsOneWidget);
 
     await tester.enterText(title, ' Juara 1 CTF ');
     await tester.enterText(organizer, 'CSUI');
     await tester.enterText(certificate, 'not a url');
     await pickDay(
-        tester, find.widgetWithText(TextFormField, 'Tanggal Diraih'), 15);
+      tester,
+      find.widgetWithText(TextFormField, 'Tanggal Diraih'),
+      15,
+    );
     await tapSave(tester);
     expect(find.text('Tautan harus berupa URL yang valid!'), findsOneWidget);
 
@@ -259,9 +289,149 @@ void main() {
     expect(find.text('Tanggal diraih tidak boleh kosong!'), findsOneWidget);
   });
 
+  testWidgets('Add Project asks for login first, then opens the form', (
+    WidgetTester tester,
+  ) async {
+    final log = <http.Request>[];
+    await tester.pumpWidget(buildApp(token: null, log: log));
+
+    await openCard(tester, 'Tambah Proyek');
+    expect(find.text('Add Project Form'), findsNothing);
+    expect(find.widgetWithText(ElevatedButton, 'Login'), findsOneWidget);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Username'),
+      'owner',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Password'),
+      'secret',
+    );
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Login'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add Project Form'), findsOneWidget);
+    expect(jsonDecode(log.single.body), {
+      'username': 'owner',
+      'password': 'secret',
+    });
+  });
+
+  testWidgets('Wrong password stays on login and shows the status code', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(buildApp(token: null, loginStatus: 400));
+    await openCard(tester, 'Tambah Proyek');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Username'),
+      'owner',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Password'),
+      'wrong',
+    );
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Login'));
+    await tester.pumpAndSettle();
+    expect(find.text('Login gagal (400).'), findsOneWidget);
+    expect(find.text('Add Project Form'), findsNothing);
+  });
+
+  testWidgets('Lihat Proyek lists projects from the API and opens detail', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(buildApp(token: null));
+    await openCard(tester, 'Lihat Proyek');
+    expect(find.text('Flag Farm'), findsOneWidget);
+
+    await tester.tap(find.text('Flag Farm'));
+    await tester.pumpAndSettle();
+    expect(find.text('A/D CTF tool'), findsOneWidget);
+    expect(find.text('Tautan: https://github.com/example'), findsOneWidget);
+  });
+
+  testWidgets('Project list shows empty message', (WidgetTester tester) async {
+    await tester.pumpWidget(buildApp(projects: []));
+    await openCard(tester, 'Lihat Proyek');
+    expect(find.text('No projects found.'), findsOneWidget);
+  });
+
+  testWidgets('Project list shows retry when the API fails', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(buildApp(listStatus: 500));
+    await openCard(tester, 'Lihat Proyek');
+    expect(find.text('Retry'), findsOneWidget);
+  });
+
+  testWidgets('Save sends the project with the token, revoked token logs out', (
+    WidgetTester tester,
+  ) async {
+    final log = <http.Request>[];
+    await tester.pumpWidget(buildApp(log: log, createStatus: 403));
+    await openCard(tester, 'Tambah Proyek');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Nama Proyek'),
+      ' Flag Farm ',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Deskripsi Proyek'),
+      'Tool',
+    );
+    await tapSave(tester);
+
+    final post = log.first;
+    expect(post.headers['Authorization'], 'Token test-token');
+    expect(jsonDecode(post.body)['name'], 'Flag Farm');
+    expect((jsonDecode(post.body) as Map).containsKey('id'), isFalse);
+    // Token ditolak: aplikasi logout lalu membuka layar login.
+    expect(log.last.url.path, '/api/v1/auth/logout/');
+    expect(find.widgetWithText(ElevatedButton, 'Login'), findsOneWidget);
+  });
+
+  testWidgets('Logout card revokes the token and login is required again', (
+    WidgetTester tester,
+  ) async {
+    final log = <http.Request>[];
+    await tester.pumpWidget(buildApp(log: log));
+    await tester.ensureVisible(find.text('Logout'));
+    await tester.tap(find.text('Logout'));
+    await tester.pumpAndSettle();
+    expect(find.text('Berhasil logout.'), findsOneWidget);
+    expect(log.single.url.path, '/api/v1/auth/logout/');
+    expect(log.single.headers['Authorization'], 'Token test-token');
+
+    // Token sudah hilang, jadi Tambah Proyek kembali meminta login.
+    await openCard(tester, 'Tambah Proyek');
+    expect(find.widgetWithText(ElevatedButton, 'Login'), findsOneWidget);
+  });
+
+  test('Project JSON maps snake_case and skips id when sending', () {
+    final project = Project.fromJson({
+      'id': 'abc',
+      'name': 'A',
+      'description': 'B',
+      'kicker': null,
+      'star_count': 3,
+    });
+    expect(project.id, 'abc');
+    expect(project.kicker, '');
+    expect(project.toJson(), {
+      'name': 'A',
+      'kicker': '',
+      'url': '',
+      'description': 'B',
+      'order': 0,
+    });
+  });
+
   test('validateOptionalUrl accepts empty and valid http(s) URLs only', () {
-    for (final ok in [null, '', '  ', 'https://a.com', 'http://localhost:8000',
-        'http://[::1]/']) {
+    for (final ok in [
+      null,
+      '',
+      '  ',
+      'https://a.com',
+      'http://localhost:8000',
+      'http://[::1]/',
+    ]) {
       expect(validateOptionalUrl(ok), isNull, reason: ok);
     }
     for (final bad in ['a.com', 'ftp://a.com', 'http://a', 'https://']) {
@@ -302,4 +472,54 @@ Future<void> pickDay(WidgetTester tester, Finder field, int day) async {
 String dayOfThisMonth(int day) {
   final now = DateTime.now();
   return DateTime(now.year, now.month, day).toIso8601String().substring(0, 10);
+}
+
+// Backend palsu agar test tidak butuh server Django yang berjalan.
+Widget buildApp({
+  String? token = 'test-token',
+  List<http.Request>? log,
+  List<Map<String, dynamic>>? projects,
+  int listStatus = 200,
+  int createStatus = 201,
+  int loginStatus = 200,
+}) {
+  final client = MockClient((request) async {
+    final path = request.url.path;
+    if (request.method == 'GET' && path == '/api/v1/projects/') {
+      return http.Response(
+        jsonEncode(
+          projects ??
+              [
+                {
+                  'id': '1',
+                  'name': 'Flag Farm',
+                  'kicker': 'CTF',
+                  'url': 'https://github.com/example',
+                  'description': 'A/D CTF tool',
+                  'order': 0,
+                  'star_count': 0,
+                },
+              ],
+        ),
+        listStatus,
+      );
+    }
+    log?.add(request);
+    if (path == '/api/v1/projects/') {
+      if (createStatus == 403) {
+        return http.Response('{"detail":"Invalid token."}', 403);
+      }
+      final body = jsonDecode(request.body) as Map<String, dynamic>;
+      return http.Response(jsonEncode({...body, 'id': 'new'}), createStatus);
+    }
+    if (path == '/api/v1/auth/token/') {
+      return http.Response(jsonEncode({'token': 'new-token'}), loginStatus);
+    }
+    if (path == '/api/v1/auth/logout/') return http.Response('', 204);
+    return http.Response('not found', 404);
+  });
+  return MyApp(
+    apiClient: ApiClient(client: client),
+    initialToken: token,
+  );
 }

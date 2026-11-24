@@ -33,11 +33,7 @@ class _AchievementFormPageState extends State<AchievementFormPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Center(
-          child: Text(
-            'Add Achievement Form',
-          ),
-        ),
+        title: const Center(child: Text('Add Achievement Form')),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
       ),
@@ -175,19 +171,19 @@ class _AchievementFormPageState extends State<AchievementFormPage> {
                           builder: (context) {
                             return AlertDialog(
                               title: const Text(
-                                  'Pencapaian berhasil ditambahkan!'),
+                                'Pencapaian berhasil ditambahkan!',
+                              ),
                               content: SingleChildScrollView(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     // trim() seperti CharField Django.
                                     Text('Judul: ${_title.trim()}'),
+                                    Text('Penyelenggara: ${_organizer.trim()}'),
                                     Text(
-                                        'Penyelenggara: ${_organizer.trim()}'),
-                                    Text(
-                                        'Tanggal: ${_formatDate(_awardedAt!)}'),
-                                    Text(
-                                        'Sertifikat: ${_certificate.trim()}'),
+                                      'Tanggal: ${_formatDate(_awardedAt!)}',
+                                    ),
+                                    Text('Sertifikat: ${_certificate.trim()}'),
                                   ],
                                 ),
                               ),
